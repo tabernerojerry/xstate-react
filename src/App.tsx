@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMachine } from '@xstate/react';
 
 import { fetchMachine } from './machines/fetch-machine';
@@ -27,6 +27,11 @@ export const App = () => {
   });
 
   const [matchingState, sendToMatchingMachine] = useMachine(matchingMachine);
+
+  useEffect(() => {
+    sendToPostsMachine({ type: 'FETCH' });
+    sendToUsersMachine({ type: 'FETCH' });
+  }, [sendToPostsMachine, sendToUsersMachine]);
 
   return (
     <div className="App">
