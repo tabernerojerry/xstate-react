@@ -5,7 +5,13 @@ interface IFetchStates {
     idle: {};
     pending: {};
     failed: {};
-    success: {};
+    success: {
+      states: {
+        unknown: {};
+        withData: {};
+        emptyData: {};
+      };
+    };
   };
 }
 
@@ -34,24 +40,42 @@ export const fetchMachine = Machine<IFecthContext, IFetchStates, IFecthEvents>(
         },
       },
       pending: {
-        entry: ['fetchData'],
-        on: {
-          RESOLVE: {
+        invoke: {
+          src: 'fetchData',
+          onDone: {
             target: 'success',
             actions: ['setResults'],
           },
-          REJECT: {
+          onError: {
             target: 'failed',
             actions: ['setMessage'],
           },
         },
       },
-      failed: {
+      success: {
         on: {
           FETCH: 'pending',
         },
+        initial: 'unknown',
+        states: {
+          unknown: {
+            on: {
+              '': [
+                {
+                  target: 'withData',
+                  cond: 'hasData',
+                },
+                {
+                  target: 'emptyData',
+                },
+              ],
+            },
+          },
+          withData: {},
+          emptyData: {},
+        },
       },
-      success: {
+      failed: {
         on: {
           FETCH: 'pending',
         },
@@ -60,8 +84,17 @@ export const fetchMachine = Machine<IFecthContext, IFetchStates, IFecthEvents>(
   },
   {
     actions: {
-      setResults: assign((context, event: any) => ({ results: event.results })),
-      setMessage: assign((context, event: any) => ({ message: event.message })),
+      setResults: assign((context, event: any) => {
+        return { results: event.data };
+      }),
+      setMessage: assign((context, event: any) => {
+        return { message: event.data };
+      }),
+    },
+    guards: {
+      hasData: (context, event: any) => {
+        return context.results.length > 0;
+      },
     },
   },
 );
