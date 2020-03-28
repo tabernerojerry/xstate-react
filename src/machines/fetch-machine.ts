@@ -1,6 +1,6 @@
 import { Machine, assign } from 'xstate';
 
-interface IFetchStates {
+interface IFetchStatesSchema {
   states: {
     idle: {};
     pending: {};
@@ -25,7 +25,11 @@ type IFecthEvents =
   | { type: 'RESOLVE'; results: Array<any> }
   | { type: 'REJECT'; message: string };
 
-export const fetchMachine = Machine<IFecthContext, IFetchStates, IFecthEvents>(
+export const fetchMachine = Machine<
+  IFecthContext,
+  IFetchStatesSchema,
+  IFecthEvents
+>(
   {
     id: 'fetchMachine',
     initial: 'idle',
@@ -60,6 +64,7 @@ export const fetchMachine = Machine<IFecthContext, IFetchStates, IFecthEvents>(
         states: {
           unknown: {
             on: {
+              // Automatic transition
               '': [
                 {
                   target: 'withData',
@@ -92,9 +97,7 @@ export const fetchMachine = Machine<IFecthContext, IFetchStates, IFecthEvents>(
       }),
     },
     guards: {
-      hasData: (context, event: any) => {
-        return context.results.length > 0;
-      },
+      hasData: context => context.results.length > 0,
     },
   },
 );
