@@ -12,8 +12,22 @@ export const App = () => {
 
   return (
     <div className="App">
-      {matchingState.matches('answering') && (
+      {matchingState.matches('quiz.answering') && (
         <>
+          <button
+            onClick={() => {
+              sendToMatchingMachine({ type: 'CONTINUE' });
+
+              if (
+                !matchingState.context.topSelectedItem ||
+                !matchingState.context.bottomSelectedItem
+              ) {
+                alert('Please complete question.');
+              }
+            }}
+          >
+            Continue
+          </button>
           <List
             keyName="name"
             fetchData={() => fetch(apiUsers).then(r => r.json())}
@@ -36,10 +50,42 @@ export const App = () => {
         </>
       )}
 
-      {matchingState.matches('submitted.correct') && <p>You are correct!</p>}
+      {matchingState.matches('quiz.verifying') && (
+        <>
+          <p>
+            {matchingState.context.topSelectedItem &&
+              matchingState.context.topSelectedItem.name}{' '}
+            and{' '}
+            {matchingState.context.bottomSelectedItem &&
+              matchingState.context.bottomSelectedItem.title}
+          </p>
+          <button
+            onClick={() => sendToMatchingMachine({ type: 'CHANGE_ANSWERS' })}
+          >
+            Change Answers
+          </button>
+          <button onClick={() => sendToMatchingMachine({ type: 'SUBMIT' })}>
+            SUBMIT
+          </button>
+        </>
+      )}
+
+      {matchingState.matches('submitted.correct') && (
+        <>
+          <p>You are correct!</p>
+          <button onClick={() => sendToMatchingMachine({ type: 'RESET' })}>
+            Reset
+          </button>
+        </>
+      )}
 
       {matchingState.matches('submitted.incorrect') && (
-        <p>Incorrect! Try again...</p>
+        <>
+          <p>Incorrect!</p>
+          <button onClick={() => sendToMatchingMachine({ type: 'RESET' })}>
+            Try Again
+          </button>
+        </>
       )}
     </div>
   );

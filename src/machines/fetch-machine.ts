@@ -89,10 +89,10 @@ export const fetchMachine = Machine<
   },
   {
     actions: {
-      setResults: assign((context, event: any) => {
+      setResults: assign((_context, event: any) => {
         return { results: event.data };
       }),
-      setMessage: assign((context, event: any) => {
+      setMessage: assign((_context, event: any) => {
         return { message: event.data };
       }),
     },

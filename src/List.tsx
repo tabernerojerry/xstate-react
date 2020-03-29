@@ -38,7 +38,9 @@ export const List: React.FC<IProps> = ({
           {fetchDataState.context.results.map((item: any) => (
             <li key={item.id}>
               <button
-                className={selectedItem === item ? 'selected' : ''}
+                className={
+                  selectedItem && selectedItem.id === item.id ? 'selected' : ''
+                }
                 onClick={() => onSelection(item)}
               >
                 {item[keyName]}

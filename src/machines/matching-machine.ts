@@ -2,20 +2,26 @@ import { Machine, assign } from 'xstate';
 
 interface IMatchingStatesSchema {
   states: {
-    answering: {
+    quiz: {
       states: {
-        topList: {
+        answering: {
           states: {
-            unselected: {};
-            selected: {};
+            topList: {
+              states: {
+                unselected: {};
+                selected: {};
+              };
+            };
+            bottomList: {
+              states: {
+                unselected: {};
+                selected: {};
+              };
+            };
+            hist: {};
           };
         };
-        bottomList: {
-          states: {
-            unselected: {};
-            selected: {};
-          };
-        };
+        verifying: {};
       };
     };
     submitted: {
@@ -36,6 +42,9 @@ interface IMatchingContext {
 type TMatchingEvents =
   | { type: 'SELECT_TOP'; selectedItem: any }
   | { type: 'SELECT_BOTTOM'; selectedItem: any }
+  | { type: 'CONTINUE' }
+  | { type: 'CHANGE_ANSWERS' }
+  | { type: 'SUBMIT' }
   | { type: 'RESET' };
 
 export const matchingMachine = Machine<
@@ -45,53 +54,91 @@ export const matchingMachine = Machine<
 >(
   {
     id: 'matchingMachine',
-    initial: 'answering',
+    initial: 'quiz',
     context: {
       topSelectedItem: undefined,
       bottomSelectedItem: undefined,
     },
     states: {
-      answering: {
-        type: 'parallel',
-        onDone: 'submitted',
+      quiz: {
+        initial: 'answering',
         states: {
-          topList: {
-            initial: 'unselected',
+          answering: {
+            type: 'parallel',
+            on: {
+              CONTINUE: {
+                target: 'verifying',
+                cond: 'questionsAnswered',
+              },
+            },
             states: {
-              unselected: {
-                on: {
-                  SELECT_TOP: {
-                    target: 'selected',
-                    actions: ['setTopSelectedItem'],
+              topList: {
+                initial: 'unselected',
+                states: {
+                  unselected: {
+                    on: {
+                      SELECT_TOP: {
+                        target: 'selected',
+                        actions: ['setTopSelectedItem'],
+                      },
+                    },
+                  },
+                  selected: {
+                    type: 'final',
+                    on: {
+                      SELECT_TOP: {
+                        target: 'selected',
+                        actions: ['setTopSelectedItem'],
+                      },
+                    },
                   },
                 },
               },
-              selected: {
-                type: 'final',
+              bottomList: {
+                initial: 'unselected',
+                states: {
+                  unselected: {
+                    on: {
+                      SELECT_BOTTOM: {
+                        target: 'selected',
+                        actions: ['setBottomSelectedItem'],
+                      },
+                    },
+                  },
+                  selected: {
+                    type: 'final',
+                    on: {
+                      SELECT_BOTTOM: {
+                        target: 'selected',
+                        actions: ['setBottomSelectedItem'],
+                      },
+                    },
+                  },
+                },
+              },
+              hist: {
+                type: 'history',
+                history: 'deep',
               },
             },
           },
-          bottomList: {
-            initial: 'unselected',
-            states: {
-              unselected: {
-                on: {
-                  SELECT_BOTTOM: {
-                    target: 'selected',
-                    actions: ['setBottomSelectedItem'],
-                  },
-                },
-              },
-              selected: {
-                type: 'final',
-              },
+          verifying: {
+            on: {
+              CHANGE_ANSWERS: 'answering.hist',
+              SUBMIT: '#submitted',
             },
           },
         },
       },
       submitted: {
-        // on: {},
+        id: 'submitted',
         initial: 'evaluating',
+        on: {
+          RESET: {
+            target: 'quiz',
+            actions: ['clearSelections'],
+          },
+        },
         states: {
           evaluating: {
             on: {
@@ -116,13 +163,27 @@ export const matchingMachine = Machine<
   {
     actions: {
       setTopSelectedItem: assign((context, event: any) => {
-        return { topSelectedItem: event.selectedItem };
+        return {
+          topSelectedItem: event.selectedItem
+            ? event.selectedItem
+            : context.topSelectedItem,
+        };
       }),
       setBottomSelectedItem: assign((context, event: any) => {
-        return { bottomSelectedItem: event.selectedItem };
+        return {
+          bottomSelectedItem: event.selectedItem
+            ? event.selectedItem
+            : context.bottomSelectedItem,
+        };
       }),
+      clearSelections: assign(() => ({
+        topSelectedItem: undefined,
+        bottomSelectedItem: undefined,
+      })),
     },
     guards: {
+      questionsAnswered: context =>
+        context.topSelectedItem && context.bottomSelectedItem,
       isCorrect: context =>
         context.topSelectedItem.id === context.bottomSelectedItem.userId,
     },
